@@ -10,7 +10,9 @@ This repository aims at:
 
 via **Context-Sensitive Hawkes Process** or **cHawk**: multivariate Hawkes Process + every patient's context
 
-#### $\lambda_{d}^{i}(t)=\boldsymbol{\mu}_{d}^{\top} \boldsymbol{f}_{j}^{i}+\sum \alpha_{d, d_{j}^{i}} g\left(t-t_{j}^{i}\right)$
+#### $\lambda_{d}^{i}(t)$
+
+#### $=\boldsymbol{\mu}_{d}^{\top} \boldsymbol{f}_{j}^{i}+\sum \alpha_{d, d_{j}^{i}} g\left(t-t_{j}^{i}\right)$
 
 based on [Multiparameter Intelligent Monitoring in Intensive Care II (MIMIC II) clinical database](<https://www.physionet.org/mimic2/>)
 
