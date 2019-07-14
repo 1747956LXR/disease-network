@@ -10,7 +10,9 @@ This repository aims at:
 
 via **Context-Sensitive Hawkes Process** or **cHawk**: multivariate Hawkes Process + every patient's context
 
-based on [Multiparameter Intelligent Monitoring in Intensive Care II (MIMIC II) clinical database](<https://www.physionet.org/mimic2/>)
+### Data
+
+[Multiparameter Intelligent Monitoring in Intensive Care II (MIMIC II) clinical database](<https://www.physionet.org/mimic2/>)
 
 ### Reference
 
