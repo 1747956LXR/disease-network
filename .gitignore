@@ -1,2 +1,4 @@
-# packages
+# modules
 test
+*/.ipynb_checkpoints
+data/mimic-iii  
