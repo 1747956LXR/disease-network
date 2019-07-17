@@ -14,19 +14,29 @@ feature_num = 2  # age, weight
 def g(t):
     return L * np.exp(-L * t)
 
-
 class cHawk:
     def __init__(self, train_data):
         # load train_data
-        D = len(set(train_data["primary"]))  # disease number
-        self.D = D
+        self.f = dict()
+        self.t = dict()
+        self.d = dict()
+        for i in set(train_data["subject_id"]):
+            s = train_data[train_data["subject_id"] == i]
+
+            self.f[i] = s[["age", "weight"]].values
+            self.t[i] = s["age"].values
+            self.d[i] = s["primary"].values
 
         # parameters initialization
+        D = len(set(train_data["primary"]))  # disease number
+        self.D = D
         self.A = np.random.rand(D, D)
         self.u = np.random.rand(D, feature_num)
 
-    def intensity(self, i, d, t): # ?
-        pass
+    def intensity(self, i, d, t):  # ?
+        j = len(self.t[i] < t)
+        return self.u[d] @ self.f[i][j - 1] + sum(
+            self.A[d][self.d[i][:j]] * g(t - self.t[i][:j]))
 
     def loss(self):
         res = 0
@@ -34,11 +44,12 @@ class cHawk:
         # L1, L2 regularization
         res += L1 * np.linalg.norm(self.A, 1)
         res += 1 / 2 * L2 * sum(
-            np.linalg.norm(self.u[d], 2)**2 for d in range(self.D))
+            np.linalg.norm(self.u[d], 2)**2 for d in range(self.D)) # todo: vectorize
 
         # log-likelihood
 
-        return res 
+
+        return res
 
     def grad(self):
         grad_A = np.zeros_like(self.A)
@@ -77,3 +88,4 @@ if __name__ == '__main__':
     model = cHawk(train_data)
     print(model.A.shape)
     print(model.loss())
+    print(model.intensity(i=41976, d=6, t=64))
