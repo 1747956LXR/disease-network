@@ -17,4 +17,3 @@ via **Context-Sensitive Hawkes Process** or **cHawk**: multivariate Hawkes Proce
 ### Reference
 
 [Constructing disease network and temporal progression model via context-sensitive hawkes process](https://www.cc.gatech.edu/~lsong/papers/ChoDuCheSonSun15.pdf)
-

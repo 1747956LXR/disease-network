@@ -47,7 +47,8 @@ class cHawk:
         self.loss_draw = []
 
     def intensity(self, t, i, d):
-        j = len(self.t[i] < t)
+        # j = np.sum(self.t[i] < t)
+        j = np.searchsorted(self.t[i], t)
         return self.u[d] @ self.f[i][j - 1] + sum(
             self.A[d][self.d[i][:j]] * g(t - self.t[i][:j]))
 
@@ -55,10 +56,8 @@ class cHawk:
         res = 0
 
         # L1, L2 regularization
-        res += L1 * np.sum(self.A)  # not np.linalg.norm(self.A, 1)
-        res += 1 / 2 * L2 * sum(
-            np.linalg.norm(self.u[d], 2)**2
-            for d in range(self.D))  # todo: vectorization
+        res += L1 * np.sum(np.abs(self.A))
+        res += 1 / 2 * L2 * np.sum(self.u * self.u)
 
         # log-likelihood
         log_likelihood = 0
@@ -68,13 +67,11 @@ class cHawk:
             for d in self.diseases:
                 # for every time the patient gets this disease
                 tijs = self.t[i][self.d[i] == d]
-                T = tijs[-1] + 1 if len(tijs) else 0
+                T = tijs[-1] if len(tijs) else 0
                 if len(tijs) != 0:
                     log_likelihood += sum(
                         np.log(self.intensity(tij, i, d)) for tij in tijs)
-                    log_likelihood -= quad(self.intensity,
-                                           0,
-                                           T,
+                    log_likelihood -= quad(self.intensity, 0, T,
                                            args=(i, d))[0]
 
         res -= log_likelihood
@@ -91,7 +88,7 @@ class cHawk:
                 gradient = 0
                 for i in self.patients:
                     tijs = self.t[i][self.d[i] == d]
-                    T = tijs[-1] + 1 if len(tijs) else 0
+                    T = tijs[-1] if len(tijs) else 0
                     tiks = self.t[i][self.d[i] == dk]
 
                     for tij in tijs:
@@ -103,7 +100,8 @@ class cHawk:
                         gradient -= G(T - tij)
 
                 gradient = -gradient
-                gradient += L1
+                gradient += L1 * grad_A[d][dk] / np.abs(
+                    grad_A[d][dk]) if grad_A[d][dk] else 0
                 grad_A[d][dk] = gradient
 
         # grad_u
@@ -111,7 +109,7 @@ class cHawk:
             gradient = 0
             for i in self.patients:
                 tijs = self.t[i][self.d[i] == d]
-                T = tijs[-1] + 1 if len(tijs) else 0
+                T = tijs[-1] if len(tijs) else 0
                 fijs = self.f[i][self.d[i] == d]
 
                 for k in range(len(tijs)):
@@ -124,7 +122,8 @@ class cHawk:
                     gradient += fij / intensity_ij
                     gradient -= self.u[d] @ fij * (tij - tij_1)
 
-                gradient -= self.u[d] @ fijs[-1] * (T - tijs[-1]) if len(tijs) else 0
+                gradient -= self.u[d] @ fijs[-1] * (T - tijs[-1]) if len(
+                    tijs) else 0
 
             gradient = -gradient
             gradient += L2 * self.u[d]
@@ -132,7 +131,7 @@ class cHawk:
 
         return grad_A, grad_u
 
-    def project(self, val=1e-3): # ?
+    def project(self, val=1e-3):
         self.A[self.A < 0] = val
         self.u[self.u < 0] = val
 
@@ -143,7 +142,7 @@ class cHawk:
 
         self.project()
 
-    def optimize(self, e=1e-6):
+    def optimize(self, e=1):
         old_loss = self.loss()
         self.update()
 
@@ -159,8 +158,8 @@ class cHawk:
         np.save('./model/u.npy', self.u)
 
     def load(self):
-        np.load('./model/A.npy', self.A)
-        np.load('./model/u.npy', self.u)
+        self.A = np.load('./model/A.npy')
+        self.u = np.load('./model/u.npy')
 
     def draw(self):
         plt.plot(np.array(self.loss_draw))
