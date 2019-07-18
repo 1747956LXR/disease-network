@@ -26,6 +26,7 @@ class cHawk:
         # load train_data
         self.patients = set(train_data["subject_id"])
         self.diseases = set(train_data["primary"])
+
         self.f = dict()
         self.t = dict()
         self.d = dict()
@@ -54,7 +55,7 @@ class cHawk:
         res = 0
 
         # L1, L2 regularization
-        res += L1 * np.linalg.norm(self.A, 1)
+        res += L1 * np.sum(self.A)  # not np.linalg.norm(self.A, 1)
         res += 1 / 2 * L2 * sum(
             np.linalg.norm(self.u[d], 2)**2
             for d in range(self.D))  # todo: vectorization
@@ -67,12 +68,13 @@ class cHawk:
             for d in self.diseases:
                 # for every time the patient gets this disease
                 tijs = self.t[i][self.d[i] == d]
+                T = tijs[-1] + 1 if len(tijs) else 0
                 if len(tijs) != 0:
                     log_likelihood += sum(
                         np.log(self.intensity(tij, i, d)) for tij in tijs)
                     log_likelihood -= quad(self.intensity,
-                                           tijs[0],
-                                           tijs[-1],
+                                           0,
+                                           T,
                                            args=(i, d))[0]
 
         res -= log_likelihood
@@ -89,15 +91,16 @@ class cHawk:
                 gradient = 0
                 for i in self.patients:
                     tijs = self.t[i][self.d[i] == d]
+                    T = tijs[-1] + 1 if len(tijs) else 0
                     tiks = self.t[i][self.d[i] == dk]
 
                     for tij in tijs:
+                        intensity_ij = self.intensity(tij, i, d)
                         for tik in tiks:
                             if tik < tij:
-                                gradient += g(tij - tik)
-                        gradient /= self.intensity(tij, i, d)
+                                gradient += g(tij - tik) / intensity_ij
 
-                        gradient -= G(tijs[-1] - tij)
+                        gradient -= G(T - tij)
 
                 gradient = -gradient
                 gradient += L1
@@ -108,19 +111,20 @@ class cHawk:
             gradient = 0
             for i in self.patients:
                 tijs = self.t[i][self.d[i] == d]
+                T = tijs[-1] + 1 if len(tijs) else 0
                 fijs = self.f[i][self.d[i] == d]
 
                 for k in range(len(tijs)):
                     tij = tijs[k]
-                    if k != 0:
-                        tij_1 = tijs[k - 1]
+                    intensity_ij = self.intensity(tij, i, d)
+
+                    tij_1 = tijs[k - 1] if k != 0 else 0
                     fij = fijs[k]
 
-                    gradient += fij / self.intensity(tij, i, d)
-                    if k != 0:
-                        gradient -= self.u[d] @ fij * (tij - tij_1)
+                    gradient += fij / intensity_ij
+                    gradient -= self.u[d] @ fij * (tij - tij_1)
 
-                # gradient -= self.u[d] @ fijs[-1]
+                gradient -= self.u[d] @ fijs[-1] * (T - tijs[-1]) if len(tijs) else 0
 
             gradient = -gradient
             gradient += L2 * self.u[d]
@@ -128,7 +132,7 @@ class cHawk:
 
         return grad_A, grad_u
 
-    def project(self, val=1e-6):
+    def project(self, val=1e-3): # ?
         self.A[self.A < 0] = val
         self.u[self.u < 0] = val
 
@@ -143,30 +147,25 @@ class cHawk:
         old_loss = self.loss()
         self.update()
 
-        i = 0
         while np.abs(self.loss() - old_loss) > e:
-            if i % 100 == 0:
-                print(old_loss)
+            print(old_loss)
             self.loss_draw.append(old_loss)
 
             old_loss = self.loss()
             self.update()
 
-            i += 1
-            if i > 1e4:
-                break
+    def save(self):
+        np.save('./model/A.npy', self.A)
+        np.save('./model/u.npy', self.u)
 
-    def save_model(self):
-        np.save('A.npy', self.A)
-        np.save('u.npy', self.u)
-
-    def load_model(self):
-        np.load('A.npy', self.A)
-        np.load('u.npy', self.u)
+    def load(self):
+        np.load('./model/A.npy', self.A)
+        np.load('./model/u.npy', self.u)
 
     def draw(self):
         plt.plot(np.array(self.loss_draw))
         plt.show()
+
 
 if __name__ == '__main__':
     data_path = './data/train_data.csv'
@@ -181,4 +180,4 @@ if __name__ == '__main__':
 
     model.optimize()
     model.draw()
-    
+    model.save()
