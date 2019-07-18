@@ -17,3 +17,6 @@ via **Context-Sensitive Hawkes Process** or **cHawk**: multivariate Hawkes Proce
 ### Reference
 
 [Constructing disease network and temporal progression model via context-sensitive hawkes process](https://www.cc.gatech.edu/~lsong/papers/ChoDuCheSonSun15.pdf)
+[Hawkes Processes](https://arxiv.org/abs/1507.02822)
+[Learning Social Infectivity in Sparse Low-rank Networks Using Multi-dimensional Hawkes Processes](http://proceedings.mlr.press/v31/zhou13a.pdf)
+[Towards Effective Prioritizing Water Pipe Replacement and Rehabilitation](https://www.ijcai.org/Proceedings/13/Papers/430.pdf)
