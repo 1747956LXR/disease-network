@@ -25,7 +25,7 @@ G = nx.DiGraph()
 A = model.A
 D = model.D
 max_val = A.max()
-threshold = max_val * (1 - 1 / (3 * np.e))
+threshold = max_val * (1 - 1 / (1 * np.e))
 
 print(A)
 
@@ -34,11 +34,11 @@ for i in range(D):
         if A[i][j] > threshold:
             G.add_edge(j, i, weight=A[i][j])
 
-pos = nx.spring_layout(G, k=0.15, iterations=2)
+pos = nx.spring_layout(G, k=1, iterations=1)
 # pos = graphviz_layout(G, prog="neato")
 
 edges = G.edges()
-weights = [(G[u][v]['weight'] - threshold) / (max_val - threshold) * 3
+weights = [(G[u][v]['weight'] - threshold) / (max_val - threshold) * 3 + 2
            for u, v in edges]
 
 nx.draw(G,
