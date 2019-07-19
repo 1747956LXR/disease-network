@@ -47,9 +47,8 @@ class cHawk:
         self.loss_draw = []
 
     def intensity(self, t, i, d):
-        # j = np.sum(self.t[i] < t)
         j = np.searchsorted(self.t[i], t)
-        return self.u[d] @ self.f[i][j - 1] + sum(
+        return self.u[d] @ self.f[i][j - 1] + np.sum(
             self.A[d][self.d[i][:j]] * g(t - self.t[i][:j]))
 
     def loss(self):
@@ -61,14 +60,13 @@ class cHawk:
 
         # log-likelihood
         log_likelihood = 0
-        # for all patients
         for i in self.patients:
-            # for all diseases of a particular patient
             for d in self.diseases:
-                # for every time the patient gets this disease
-                tijs = self.t[i][self.d[i] == d]
-                T = tijs[-1] if len(tijs) else 0
-                if len(tijs) != 0:
+                disease_d = (self.d[i] == d)
+                if disease_d.any():
+                    tijs = self.t[i][disease_d]
+                    T = self.t[i][-1]
+                    
                     log_likelihood += sum(
                         np.log(self.intensity(tij, i, d)) for tij in tijs)
                     log_likelihood -= quad(self.intensity, 0, T,
@@ -85,45 +83,49 @@ class cHawk:
         # grad_A
         for d in range(self.D):
             for dk in range(self.D):
+                
                 gradient = 0
                 for i in self.patients:
-                    tijs = self.t[i][self.d[i] == d]
-                    T = tijs[-1] if len(tijs) else 0
-                    tiks = self.t[i][self.d[i] == dk]
+                    disease_d = (self.d[i] == d)
+                    if disease_d.any():
+                        tijs = self.t[i][disease_d]
+                        T = self.t[i][-1]
+                        tiks = self.t[i][self.d[i] == dk]
 
-                    for tij in tijs:
-                        intensity_ij = self.intensity(tij, i, d)
-                        for tik in tiks:
-                            if tik < tij:
-                                gradient += g(tij - tik) / intensity_ij
+                        for tij in tijs:
+                            intensity_ij = self.intensity(tij, i, d)
+                            for tik in tiks:
+                                if tik < tij:
+                                    gradient += g(tij - tik) / intensity_ij
 
-                        gradient -= G(T - tij)
+                                gradient -= G(T - tik)  #
 
                 gradient = -gradient
-                gradient += L1 * grad_A[d][dk] / np.abs(
-                    grad_A[d][dk]) if grad_A[d][dk] else 0
+                gradient += L1 * np.sign(grad_A[d][dk])
                 grad_A[d][dk] = gradient
 
         # grad_u
         for d in range(self.D):
             gradient = 0
             for i in self.patients:
-                tijs = self.t[i][self.d[i] == d]
-                T = tijs[-1] if len(tijs) else 0
-                fijs = self.f[i][self.d[i] == d]
+                disease_d = (self.d[i] == d)
+                if disease_d.any():
+                    tijs = self.t[i][disease_d]
+                    fijs = self.f[i][disease_d]
 
-                for k in range(len(tijs)):
-                    tij = tijs[k]
-                    intensity_ij = self.intensity(tij, i, d)
+                    T = self.t[i][-1]
 
-                    tij_1 = tijs[k - 1] if k != 0 else 0
-                    fij = fijs[k]
+                    for k in range(len(tijs)):
+                        tij = tijs[k]
+                        intensity_ij = self.intensity(tij, i, d)
 
-                    gradient += fij / intensity_ij
-                    gradient -= self.u[d] @ fij * (tij - tij_1)
+                        tij_1 = tijs[k - 1] if k != 0 else self.t[i][0]
+                        fij = fijs[k]
 
-                gradient -= self.u[d] @ fijs[-1] * (T - tijs[-1]) if len(
-                    tijs) else 0
+                        gradient += fij / intensity_ij
+                        gradient -= fij * (tij - tij_1)
+
+                    gradient -= fijs[-1] * (T - tijs[-1])
 
             gradient = -gradient
             gradient += L2 * self.u[d]
