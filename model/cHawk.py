@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.integrate import quad
+# from scipy.integrate import quad
 import matplotlib.pyplot as plt
 
 # Hyperparameters:
@@ -26,6 +26,8 @@ class cHawk:
         # load train_data
         self.patients = set(train_data["subject_id"])
         self.diseases = set(train_data["primary"])
+        D = len(self.diseases)  # disease number
+        self.D = D
 
         self.f = dict()
         self.t = dict()
@@ -38,19 +40,20 @@ class cHawk:
             self.d[i] = s["primary"].values
 
         # parameters initialization
-        D = len(self.diseases)  # disease number
-        self.D = D
         self.A = np.random.rand(D, D)  # subject to A >= 0
         self.u = np.random.rand(D, feature_num)  # subject to u_d >= 0
 
         # visualization
         self.loss_draw = []
 
+    # @profile
     def intensity(self, t, i, d):
         j = np.searchsorted(self.t[i], t)
+        j = len(self.t[i][self.t[i] < t])
         return self.u[d] @ self.f[i][j - 1] + np.sum(
             self.A[d][self.d[i][:j]] * g(t - self.t[i][:j]))
 
+    # @profile
     def loss(self):
         res = 0
 
@@ -61,21 +64,31 @@ class cHawk:
         # log-likelihood
         log_likelihood = 0
         for i in self.patients:
+            T = self.t[i][-1]
+
             for d in self.diseases:
                 disease_d = (self.d[i] == d)
+
                 if disease_d.any():
                     tijs = self.t[i][disease_d]
-                    T = self.t[i][-1]
-                    
                     log_likelihood += sum(
                         np.log(self.intensity(tij, i, d)) for tij in tijs)
-                    log_likelihood -= quad(self.intensity, 0, T,
-                                           args=(i, d))[0]
+
+                log_likelihood -= self.u[d] @ sum(
+                    self.f[i][j] * (self.t[i][j + 1] - self.t[i][j])
+                    for j in range(len(self.t[i]) - 1))
+                log_likelihood -= self.u[d] @ self.f[i][-1] * (T -
+                                                               self.t[i][-1])
+
+                log_likelihood -= sum(
+                    G(T - self.t[i][j]) * self.A[d][self.d[i][j]]
+                    for j in range(len(self.t[i])))
 
         res -= log_likelihood
 
         return res
 
+    # @profile
     def grad(self):
         grad_A = np.zeros_like(self.A)
         grad_u = np.zeros_like(self.u)
@@ -83,14 +96,15 @@ class cHawk:
         # grad_A
         for d in range(self.D):
             for dk in range(self.D):
-                
+
                 gradient = 0
                 for i in self.patients:
                     disease_d = (self.d[i] == d)
                     if disease_d.any():
                         tijs = self.t[i][disease_d]
-                        T = self.t[i][-1]
                         tiks = self.t[i][self.d[i] == dk]
+
+                        T = self.t[i][-1]
 
                         for tij in tijs:
                             intensity_ij = self.intensity(tij, i, d)
@@ -141,19 +155,21 @@ class cHawk:
         grad_A, grad_u = self.grad()
         self.A -= lr * grad_A
         self.u -= lr * grad_u
-
         self.project()
 
-    def optimize(self, e=1):
+    def optimize(self, e=1e-1):
         old_loss = self.loss()
         self.update()
 
+        i = 0
         while np.abs(self.loss() - old_loss) > e:
-            print(old_loss)
+            # if i % 1000 == 0:
+            print(old_loss, '\t', i)
             self.loss_draw.append(old_loss)
-
             old_loss = self.loss()
+
             self.update()
+            i += 1
 
     def save(self):
         np.save('./model/A.npy', self.A)

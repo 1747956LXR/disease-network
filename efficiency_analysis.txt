@@ -1,0 +1,121 @@
+Timer unit: 1e-06 s
+
+Total time: 13.5731 s
+File: model/cHawk.py
+Function: intensity at line 49
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    49                                               @profile
+    50                                               def intensity(self, t, i, d):
+    51    397740    2112401.0      5.3     15.6          j = np.searchsorted(self.t[i], t)
+    52    397740    1845163.0      4.6     13.6          j = len(self.t[i][self.t[i] < t])
+    53    397740    1219130.0      3.1      9.0          return self.u[d] @ self.f[i][j - 1] + np.sum(
+    54    397740    8396396.0     21.1     61.9              self.A[d][self.d[i][:j]] * g(t - self.t[i][:j]))
+
+Total time: 12.5266 s
+File: model/cHawk.py
+Function: loss at line 56
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    56                                               @profile
+    57                                               def loss(self):
+    58      1894       2524.0      1.3      0.0          res = 0
+    59                                           
+    60                                                   # L1, L2 regularization
+    61      1894      53259.0     28.1      0.4          res += L1 * np.sum(np.abs(self.A))
+    62      1894      25619.0     13.5      0.2          res += 1 / 2 * L2 * np.sum(self.u * self.u)
+    63                                           
+    64                                                   # log-likelihood
+    65      1894       2858.0      1.5      0.0          log_likelihood = 0
+    66     17046      20210.0      1.2      0.2          for i in self.patients:
+    67     15152      23413.0      1.5      0.2              T = self.t[i][-1]
+    68                                           
+    69    196976     225872.0      1.1      1.8              for d in self.diseases:
+    70    181824     522085.0      2.9      4.2                  disease_d = (self.d[i] == d)
+    71                                           
+    72    181824     897548.0      4.9      7.2                  if disease_d.any():
+    73     34092      86362.0      2.5      0.7                      tijs = self.t[i][disease_d]
+    74     34092      35798.0      1.1      0.3                      log_likelihood += sum(
+    75     34092    2495896.0     73.2     19.9                          np.log(self.intensity(tij, i, d)) for tij in tijs)
+    76                                           
+    77    181824     266643.0      1.5      2.1                  log_likelihood -= self.u[d] @ sum(
+    78    181824     215932.0      1.2      1.7                      self.f[i][j] * (self.t[i][j + 1] - self.t[i][j])
+    79    181824    2877576.0     15.8     23.0                      for j in range(len(self.t[i]) - 1))
+    80    181824     472645.0      2.6      3.8                  log_likelihood -= self.u[d] @ self.f[i][-1] * (T -
+    81    181824     332041.0      1.8      2.7                                                                 self.t[i][-1])
+    82                                           
+    83    181824     178360.0      1.0      1.4                  log_likelihood -= sum(
+    84    181824     211085.0      1.2      1.7                      G(T - self.t[i][j]) * self.A[d][self.d[i][j]]
+    85    181824    3576868.0     19.7     28.6                      for j in range(len(self.t[i])))
+    86                                           
+    87      1894       2332.0      1.2      0.0          res -= log_likelihood
+    88                                           
+    89      1894       1652.0      0.9      0.0          return res
+
+Total time: 27.0598 s
+File: model/cHawk.py
+Function: grad at line 91
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    91                                               @profile
+    92                                               def grad(self):
+    93       947      24245.0     25.6      0.1          grad_A = np.zeros_like(self.A)
+    94       947       6105.0      6.4      0.0          grad_u = np.zeros_like(self.u)
+    95                                           
+    96                                                   # grad_A
+    97     12311       8355.0      0.7      0.0          for d in range(self.D):
+    98    147732     123774.0      0.8      0.5              for dk in range(self.D):
+    99                                           
+   100    136368      93900.0      0.7      0.3                  gradient = 0
+   101   1227312     874922.0      0.7      3.2                  for i in self.patients:
+   102   1090944    2406343.0      2.2      8.9                      disease_d = (self.d[i] == d)
+   103   1090944    3462260.0      3.2     12.8                      if disease_d.any():
+   104    204552     390371.0      1.9      1.4                          tijs = self.t[i][disease_d]
+   105    204552     556065.0      2.7      2.1                          tiks = self.t[i][self.d[i] == dk]
+   106                                           
+   107    204552     224186.0      1.1      0.8                          T = self.t[i][-1]
+   108                                           
+   109    522744     537047.0      1.0      2.0                          for tij in tijs:
+   110    318192   12688216.0     39.9     46.9                              intensity_ij = self.intensity(tij, i, d)
+   111    509486     921322.0      1.8      3.4                              for tik in tiks:
+   112    191294     153492.0      0.8      0.6                                  if tik < tij:
+   113     82389     406595.0      4.9      1.5                                      gradient += g(tij - tik) / intensity_ij
+   114                                           
+   115    191294     886425.0      4.6      3.3                                  gradient -= G(T - tik)  #
+   116                                           
+   117    136368     104470.0      0.8      0.4                  gradient = -gradient
+   118    136368     684220.0      5.0      2.5                  gradient += L1 * np.sign(grad_A[d][dk])
+   119    136368     178694.0      1.3      0.7                  grad_A[d][dk] = gradient
+   120                                           
+   121                                                   # grad_u
+   122     12311       9256.0      0.8      0.0          for d in range(self.D):
+   123     11364       6519.0      0.6      0.0              gradient = 0
+   124    102276      73075.0      0.7      0.3              for i in self.patients:
+   125     90912     179370.0      2.0      0.7                  disease_d = (self.d[i] == d)
+   126     90912     274825.0      3.0      1.0                  if disease_d.any():
+   127     17046      30960.0      1.8      0.1                      tijs = self.t[i][disease_d]
+   128     17046     196575.0     11.5      0.7                      fijs = self.f[i][disease_d]
+   129                                           
+   130     17046      20511.0      1.2      0.1                      T = self.t[i][-1]
+   131                                           
+   132     43562      48504.0      1.1      0.2                      for k in range(len(tijs)):
+   133     26516      21834.0      0.8      0.1                          tij = tijs[k]
+   134     26516    1001290.0     37.8      3.7                          intensity_ij = self.intensity(tij, i, d)
+   135                                           
+   136     26516      37820.0      1.4      0.1                          tij_1 = tijs[k - 1] if k != 0 else self.t[i][0]
+   137     26516      27486.0      1.0      0.1                          fij = fijs[k]
+   138                                           
+   139     26516     145662.0      5.5      0.5                          gradient += fij / intensity_ij
+   140     26516     112970.0      4.3      0.4                          gradient -= fij * (tij - tij_1)
+   141                                           
+   142     17046      69732.0      4.1      0.3                      gradient -= fijs[-1] * (T - tijs[-1])
+   143                                           
+   144     11364      19782.0      1.7      0.1              gradient = -gradient
+   145     11364      42956.0      3.8      0.2              gradient += L2 * self.u[d]
+   146     11364       9068.0      0.8      0.0              grad_u = gradient
+   147                                           
+   148       947        581.0      0.6      0.0          return grad_A, grad_u
+
