@@ -34,7 +34,7 @@ for i in range(D):
         if A[i][j] > threshold:
             G.add_edge(j, i, weight=A[i][j])
 
-pos = nx.spring_layout(G, k=0.15, iterations=20)
+pos = nx.spring_layout(G, k=0.15, iterations=2)
 # pos = graphviz_layout(G, prog="neato")
 
 edges = G.edges()

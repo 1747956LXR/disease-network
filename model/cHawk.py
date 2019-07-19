@@ -49,7 +49,6 @@ class cHawk:
     # @profile
     def intensity(self, t, i, d):
         j = np.searchsorted(self.t[i], t)
-        j = len(self.t[i][self.t[i] < t])
         return self.u[d] @ self.f[i][j - 1] + np.sum(
             self.A[d][self.d[i][:j]] * g(t - self.t[i][:j]))
 
@@ -124,22 +123,20 @@ class cHawk:
             for i in self.patients:
                 disease_d = (self.d[i] == d)
                 if disease_d.any():
-                    tijs = self.t[i][disease_d]
-                    fijs = self.f[i][disease_d]
+                    gradient += sum(
+                        self.f[i][disease_d][k] /
+                        self.intensity(self.t[i][disease_d][k], i, d)
+                        for k in range(np.sum(disease_d)))
 
-                    T = self.t[i][-1]
+                tijs = self.t[i]
+                fijs = self.f[i]
+                T = self.t[i][-1]
 
-                    for k in range(len(tijs)):
-                        tij = tijs[k]
-                        intensity_ij = self.intensity(tij, i, d)
+                gradient -= sum(fijs[j] * (tijs[j + 1] - tijs[j])
+                                for j in range(len(tijs) - 1))
+                # gradient -= fij * (tij - tij_1)
 
-                        tij_1 = tijs[k - 1] if k != 0 else self.t[i][0]
-                        fij = fijs[k]
-
-                        gradient += fij / intensity_ij
-                        gradient -= fij * (tij - tij_1)
-
-                    gradient -= fijs[-1] * (T - tijs[-1])
+                # gradient -= fijs[-1] * (T - tijs[-1])
 
             gradient = -gradient
             gradient += L2 * self.u[d]
@@ -151,7 +148,7 @@ class cHawk:
         self.A[self.A < 0] = val
         self.u[self.u < 0] = val
 
-    def update(self, lr=1e-4):
+    def update(self, lr=1e-5):
         grad_A, grad_u = self.grad()
         self.A -= lr * grad_A
         self.u -= lr * grad_u
