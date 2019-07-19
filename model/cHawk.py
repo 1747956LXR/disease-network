@@ -164,17 +164,22 @@ class cHawk:
             old_loss = self.loss()
 
             self.update()
+
             i += 1
+            if i > 1000:
+                break
 
         self.A[self.vis == 0] = 0
 
-    def save(self):
-        np.save('./model/A.npy', self.A)
-        np.save('./model/u.npy', self.u)
+    def save(self, file_A='./model/A.npy', file_u='./model/u.npy', file_loss='./model/loss.npy'):
+        np.save(file_A, self.A)
+        np.save(file_u, self.u)
+        np.save(file_loss,np.array(self.loss_draw))
 
-    def load(self):
-        self.A = np.load('./model/A.npy')
-        self.u = np.load('./model/u.npy')
+    def load(self, file_A='./model/A.npy', file_u='./model/u.npy', file_loss='./model/loss.npy'):
+        self.A = np.load(file_A)
+        self.u = np.load(file_u)
+        self.loss_draw = list(np.load(file_loss))
 
     def draw(self):
         plt.plot(np.array(self.loss_draw))
