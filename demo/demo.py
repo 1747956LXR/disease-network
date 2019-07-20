@@ -13,7 +13,6 @@ train_data = pd.DataFrame(pd.read_csv(data_path))
 model = cHawk(train_data)
 model.load()
 
-
 def intensity_drawing(i, d):
     start = model.t[i][0]
     end = model.t[i][-1]
