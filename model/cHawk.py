@@ -143,9 +143,9 @@ class cHawk:
 
         return grad_A, grad_u
 
-    def project(self, val=0):
-        self.A[self.A < 0] = val
-        self.u[self.u < 0] = val
+    def project(self):
+        self.A[self.A < 0] = 0
+        self.u[self.u < 0] = 0
 
     def update(self, lr=1e-5): # TODO: momentum
         grad_A, grad_u = self.grad()
