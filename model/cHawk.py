@@ -139,21 +139,21 @@ class cHawk:
 
             gradient = -gradient
             gradient += L2 * self.u[d]
-            grad_u = gradient
+            grad_u[d] = gradient
 
         return grad_A, grad_u
 
-    def project(self, val=1e-3):
+    def project(self, val=0):
         self.A[self.A < 0] = val
         self.u[self.u < 0] = val
 
-    def update(self, lr=1e-5):
+    def update(self, lr=1e-5): # TODO: momentum
         grad_A, grad_u = self.grad()
         self.A -= lr * grad_A
         self.u -= lr * grad_u
         self.project()
 
-    def optimize(self, e=5e-2):
+    def optimize(self, e=1e-3):
         old_loss = self.loss()
         self.update()
 
@@ -192,11 +192,10 @@ if __name__ == '__main__':
     print(train_data)
 
     model = cHawk(train_data)
-    # print(model.A.shape)
-    # print(model.loss())
     # print(model.intensity(i=41976, d=6, t=64))
     # print(model.grad())
 
     model.optimize()
+    print(model.grad())
     model.draw()
     model.save()

@@ -35,7 +35,6 @@ for i in range(D):
             G.add_edge(j, i, weight=A[i][j])
 
 pos = nx.spring_layout(G, k=1, iterations=1)
-# pos = graphviz_layout(G, prog="neato")
 
 edges = G.edges()
 weights = [(G[u][v]['weight'] - threshold) / (max_val - threshold) * 3 + 2

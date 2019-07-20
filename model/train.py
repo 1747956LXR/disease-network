@@ -5,7 +5,7 @@ from cHawk import cHawk
 data_path = os.path.abspath('./data/train_data.csv')
 train_data = pd.DataFrame(pd.read_csv(data_path))
 
-for i in range(100):
+for i in range(20):
     model = cHawk(train_data)
     model.optimize()
     model.save('./results/A' + str(i) + '.npy',
