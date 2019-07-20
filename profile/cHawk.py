@@ -49,13 +49,13 @@ class cHawk:
         # visualization
         self.loss_draw = []
 
-    # @profile
+    @profile
     def intensity(self, t, i, d):
         j = np.searchsorted(self.t[i], t)
         return self.u[d] @ self.f[i][j - 1] + np.sum(
             self.A[d][self.d[i][:j]] * g(t - self.t[i][:j]))
 
-    # @profile
+    @profile
     def loss(self):
         res = 0
 
@@ -89,7 +89,7 @@ class cHawk:
 
         return res
 
-    # @profile
+    @profile
     def grad(self):
         grad_A = np.zeros_like(self.A)
         grad_u = np.zeros_like(self.u)
@@ -172,12 +172,12 @@ class cHawk:
 
         self.A[self.vis == 0] = 0
 
-    def save(self, file_A='./model/A.npy', file_u='./model/u.npy', file_loss='./model/loss.npy'):
+    def save(self, file_A='../model/A.npy', file_u='../model/u.npy', file_loss='../model/loss.npy'):
         np.save(file_A, self.A)
         np.save(file_u, self.u)
         np.save(file_loss,np.array(self.loss_draw))
 
-    def load(self, file_A='./model/A.npy', file_u='./model/u.npy', file_loss='./model/loss.npy'):
+    def load(self, file_A='../model/A.npy', file_u='../model/u.npy', file_loss='../model/loss.npy'):
         self.A = np.load(file_A)
         self.u = np.load(file_u)
         self.loss_draw = list(np.load(file_loss))
@@ -188,7 +188,7 @@ class cHawk:
 
 
 if __name__ == '__main__':
-    data_path = './data/train_data.csv'
+    data_path = '../data/train_data.csv'
     train_data = pd.DataFrame(pd.read_csv(data_path))
     print(train_data)
 

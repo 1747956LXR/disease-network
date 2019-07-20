@@ -1,0 +1,96 @@
+\documentclass{article}
+
+\usepackage{amsmath,amscd,amsbsy,amssymb,latexsym,url,bm,amsthm}
+
+
+\title{Basic methodology in \textit{cHawk}}
+
+\author{Fangyu Ding}
+
+\begin{document}
+	\maketitle
+	
+	\tableofcontents
+	
+	\newpage
+	
+	\section{Introduction}
+	
+		\subsection{Hawkes Process}
+		
+		\subsection{Multi-dimensional Hawkes Process}
+		
+		\begin{equation}
+		\lambda_{d}(t)=\mu_{d}+\sum_{t_{i}<t} \alpha_{d, d_{i}} g\left(t-t_{i}\right)
+		\end{equation}
+		
+		\subsection{Context-sensitive Multi-dimensional Hawkes Process(cHawk)}
+		
+		\begin{equation}
+		\lambda_{d}^{i}(t)=\boldsymbol{\mu}_{d}^{\top} \boldsymbol{f}_{j}^{i}+\sum_{t_{j}^{i}<t} \alpha_{d, d_{j}^{i}} g\left(t-t_{j}^{i}\right)
+		\end{equation}
+	
+	\section{Expectation-Maximization algorithm}
+	
+	In statistics, an expectation–maximization (EM) algorithm is an iterative method to find maximum likelihood or maximum a posteriori (MAP) estimates of parameters in statistical models, where the model depends on unobserved latent variables.
+	
+		\subsection{Expectation}
+		
+		An E-step creates a function for the expectation of the log-likelihood evaluated using the current estimate for the parameters.
+		
+		\subsection{Maximization} 
+		
+		An M-step computes parameters maximizing the expected log-likelihood found on the E-step. 
+	
+	\section{Loss function}
+	
+	
+	
+		\subsection{Log-likelihood}
+		
+		For a patient $i$, the corresponding $log$-$likelihood$ is:
+		
+		\begin{equation}
+		\begin{aligned} 
+		\ell\left(\mathcal{T}^{i}\right)
+		&= \sum_{d=1}^{D}\left\{\sum_{\left(t_{j}^{i}, d_{j}^{i}=d, f_{j}^{i}\right) \in \mathcal{T}^ {i}}
+		\left(\log \lambda_{d}^{i}\left(t_{j}^{i}\right)-\int_{t_{j-1}^{i}}^{t_{j}^{i}} \lambda_{d}^{i}(\tau) d \tau\right)\right.
+		\\
+		\phantom{=\;\;}
+		&-\left.\int_{t_{n, d}^{i}}^{T} \lambda_{d}^{i}(\tau) d \tau \right\}
+		\end{aligned}
+		\end{equation}
+		To sum up, the total $log$-$likelihood$ is:
+
+		\begin{equation}
+		\ell\left(\mathcal{C} | \boldsymbol{A} ;\left\{\boldsymbol{\mu}_{d}\right\}_{d=1}^{D}\right)=\sum_{\mathcal{T}^{i} \in \mathcal{C}} \ell\left(\mathcal{T}^{i}\right)
+		\end{equation}
+		
+		\subsection{Regularization}
+		
+		Applying L1 and L2 regularization on it, the optimization problem of the loss function comes out to be:
+		
+		\begin{equation}
+		\begin{array}{l}{\min \left\{-\ell\left(\mathcal{C} | \boldsymbol{A} ;\left\{\boldsymbol{\mu}_{d}\right\}_{d=1}^{D}\right)+\lambda_{1}\|\boldsymbol{A}\|_{1}+\frac{\lambda_{2}}{2} \sum_{d=1}^{D}\left\|\boldsymbol{\mu}_{d}\right\|_{2}^{2}\right\}} \\ {\text { subject to } \boldsymbol{A} \geqslant 0,\left\{\boldsymbol{\mu}_{d}\right\}_{d=1}^{D} \geqslant 0}\end{array}
+		\end{equation}
+		where $\|\boldsymbol{A}\|_{1}$ refers to the summation of the absolute value of matrix $\boldsymbol{A}$'s elements rather than its 1-norm.
+	
+	\section{Derivatives of loss function}
+	
+		\subsection{log-likelihood}
+		
+		some text
+		
+		\subsection{regularization}
+		
+		some text
+	
+%	\section{First Section}
+%	
+%	some text
+%	
+%	\subsection{First Sub Section}
+%	
+%	some text
+	
+\end{document}
