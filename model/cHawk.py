@@ -112,7 +112,7 @@ class cHawk:
                                     gradient += g(tij - tik) / intensity_ij
 
                         T = self.t[i][-1]
-                        for tik in tiks: # for all d, it's the same?
+                        for tik in tiks:  # for all d, it's the same?
                             gradient -= G(T - tik)
 
                 gradient = -gradient
@@ -128,8 +128,8 @@ class cHawk:
 
                 if disease_d.any():
                     gradient += sum(
-                        self.f[i][disease_d][k] / (
-                        self.intensity(self.t[i][disease_d][k], i, d))
+                        self.f[i][disease_d][k] /
+                        (self.intensity(self.t[i][disease_d][k], i, d))
                         for k in range(np.sum(disease_d)))
 
                 tijs = self.t[i]
@@ -144,54 +144,48 @@ class cHawk:
 
         return grad_A, grad_u
 
-    def project(self, val=1e-8):
+    def project(self, val=0):
         self.A[self.A < 0] = val
         self.u[self.u < 0] = val
 
-    def update(self, lr=1e-5):
-        grad_A, grad_u = self.grad()
-        self.A -= lr * grad_A
-        self.u -= lr * grad_u
-
-        # project to A >= 0 & u >= 0
-        self.project()
-
     # plain gradient descent
-    def GD(self, e=1e-3):
-        old_loss = self.loss()
-        self.update()
-
+    def GD(self, e=1e-3, lr=1e-5):
         i = 0
-        while np.abs(self.loss() - old_loss) > e:
+        while True:
+            # old loss
+            old_loss = self.loss()
             print(old_loss, '\t', i)
             self.loss_draw.append(old_loss)
-            old_loss = self.loss()
 
-            self.update()
+            # update
+            grad_A, grad_u = self.grad()
+            self.A -= lr * grad_A
+            self.u -= lr * grad_u
+            self.project()
+
+            # end loop
+            if np.abs(self.loss() - old_loss) < e:
+                break
 
             i += 1
             if i > 1000:
                 break
 
+        # get rid of irrelavant disease pairs
         self.A[self.vis == 0] = 0
 
     # momentum gradient descent
-    def MGD(self, e=1e-4, lr=1e-5, momentum=0.8): # 0.9 ? 
-        old_loss = self.loss()
-
+    def MGD(self, e=1e-4, lr=1e-5, momentum=0.8):
+        # init v_dA, v_du
         v_dA, v_du = self.grad()
-
-        self.A -= lr * v_dA
-        self.u -= lr * v_du
-        self.project()
-
         i = 0
-        while np.abs(self.loss() - old_loss) > e:
+        while True:
+            # old loss
+            old_loss = self.loss()
             print(old_loss, '\t', i)
             self.loss_draw.append(old_loss)
 
-            old_loss = self.loss()
-
+            # update
             grad_A, grad_u = self.grad()
 
             v_dA = momentum * v_dA + (1 - momentum) * grad_A
@@ -201,33 +195,27 @@ class cHawk:
             self.u -= lr * v_du
             self.project()
 
+            # end loop
+            if np.abs(self.loss() - old_loss) < e:
+                break
+
             i += 1
             if i > 500:
                 break
 
+        # get rid of irrelavant disease pairs
         self.A[self.vis == 0] = 0
 
-    # ???
+    # Adagrad
     def Adagrad(self, e=1e-3, lr=1e-2):
-        old_loss = self.loss()
+        # init squared grad
         grad_A_squared = 0
         grad_u_squared = 0
-
-        grad_A, grad_u = self.grad()
-
-        grad_A_squared += grad_A * grad_A
-        grad_u_squared += grad_u * grad_u
-
-        self.A -= lr * grad_A / (np.sqrt(grad_A_squared + 1e-7) )
-        self.u -= lr * grad_u / (np.sqrt(grad_u_squared + 1e-7) )
-
-        self.project()
-
         i = 0
-        while np.abs(self.loss() - old_loss) > e:
+        while True:
+            old_loss = self.loss()
             print(old_loss, '\t', i)
             self.loss_draw.append(old_loss)
-            old_loss = self.loss()
 
             grad_A, grad_u = self.grad()
 
@@ -239,14 +227,65 @@ class cHawk:
 
             self.project()
 
+            # end loop
+            if np.abs(self.loss() - old_loss) < e:
+                break
+
             i += 1
             if i > 3000:
                 break
 
+        # get rid of irrelavant disease pairs
+        self.A[self.vis == 0] = 0
+
+    # Adam
+    def Adam(self, e=1e-3, lr=1e-4, beta1=0.5, beta2=0.7):
+        # init
+        first_moment_A = 0
+        first_moment_u = 0
+        second_moment_A = 0
+        second_moment_u = 0
+        i = 1
+        while True:
+            # old loss
+            old_loss = self.loss()
+            print(old_loss, '\t', i)
+            self.loss_draw.append(old_loss)
+
+            # momentum
+            grad_A, grad_u = self.grad()
+            first_moment_A = beta1 * first_moment_A + (1 - beta1) * grad_A
+            first_moment_u = beta1 * first_moment_u + (1 - beta1) * grad_u
+            second_moment_A = beta2 * second_moment_A + (
+                1 - beta2) * grad_A * grad_A
+            second_moment_u = beta2 * second_moment_u + (
+                1 - beta2) * grad_u * grad_u
+
+            # bias correction
+            first_unbias_A = first_moment_A / (1 - beta1**i)
+            first_unbias_u = first_moment_u / (1 - beta1**i)
+            second_unbias_A = second_moment_A / (1 - beta2**i)
+            second_unbias_u = second_moment_u / (1 - beta2**i)
+
+            # AdaGrad / RMSProp
+            self.A -= lr * first_unbias_A / (np.sqrt(second_unbias_A) + 1e-9)
+            self.u -= lr * first_unbias_u / (np.sqrt(second_unbias_u) + 1e-9)
+
+            self.project()
+
+            # end loop
+            if np.abs(self.loss() - old_loss) < e:
+                break
+
+            i += 1
+            if i > 30000:
+                break
+
+        # get rid of irrelavant disease pairs
         self.A[self.vis == 0] = 0
 
     def optimize(self):
-        self.MGD()
+        self.Adam()
 
     def save(self,
              file_A='./model/A.npy',
