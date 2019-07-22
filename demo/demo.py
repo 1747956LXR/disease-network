@@ -10,6 +10,8 @@ from model.cHawk import cHawk
 
 data_path = os.path.abspath('./data/train_data.csv')
 train_data = pd.DataFrame(pd.read_csv(data_path))
+# print(train_data)
+# exit(0)
 model = cHawk(train_data)
 model.load()
 

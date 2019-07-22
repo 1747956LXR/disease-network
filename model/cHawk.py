@@ -27,7 +27,7 @@ class cHawk:
         # load train_data
         self.patients = set(train_data["subject_id"])
         self.diseases = set(train_data["primary"])
-        D = len(self.diseases)  # disease number
+        D = max(self.diseases) + 1  # disease number
         self.D = D
 
         self.f = dict()
@@ -112,7 +112,7 @@ class cHawk:
                                     gradient += g(tij - tik) / intensity_ij
 
                         T = self.t[i][-1]
-                        for tik in tiks:  # for all d, it's the same?
+                        for tik in tiks:  
                             gradient -= G(T - tik)
 
                 gradient = -gradient
@@ -149,7 +149,7 @@ class cHawk:
         self.u[self.u < 0] = val
 
     # plain gradient descent
-    def GD(self, e=1e-3, lr=1e-5):
+    def GD(self, e=5e-2, lr=1e-5):
         i = 0
         while True:
             # old loss
@@ -175,7 +175,7 @@ class cHawk:
         self.A[self.vis == 0] = 0
 
     # momentum gradient descent
-    def MGD(self, e=1e-4, lr=1e-5, momentum=0.8):
+    def MGD(self, e=1e-3, lr=1e-5, momentum=0.8):
         # init v_dA, v_du
         v_dA, v_du = self.grad()
         i = 0
@@ -200,7 +200,7 @@ class cHawk:
                 break
 
             i += 1
-            if i > 500:
+            if i > 2000:
                 break
 
         # get rid of irrelavant disease pairs
@@ -238,8 +238,8 @@ class cHawk:
         # get rid of irrelavant disease pairs
         self.A[self.vis == 0] = 0
 
-    # Adam
-    def Adam(self, e=1e-3, lr=1e-4, beta1=0.5, beta2=0.7):
+    # Adam (is difficult to avoid local minimum), so choose MGD
+    def Adam(self, e=1e-5, lr=1e-6, beta1=0.9, beta2=0.999):
         # init
         first_moment_A = 0
         first_moment_u = 0
@@ -268,8 +268,8 @@ class cHawk:
             second_unbias_u = second_moment_u / (1 - beta2**i)
 
             # AdaGrad / RMSProp
-            self.A -= lr * first_unbias_A / (np.sqrt(second_unbias_A) + 1e-9)
-            self.u -= lr * first_unbias_u / (np.sqrt(second_unbias_u) + 1e-9)
+            self.A -= lr * first_unbias_A / (np.sqrt(second_unbias_A) + 1e-8)
+            self.u -= lr * first_unbias_u / (np.sqrt(second_unbias_u) + 1e-8)
 
             self.project()
 
@@ -285,7 +285,7 @@ class cHawk:
         self.A[self.vis == 0] = 0
 
     def optimize(self):
-        self.Adam()
+        self.MGD()
 
     def save(self,
              file_A='./model/A.npy',
