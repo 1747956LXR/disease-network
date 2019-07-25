@@ -1,0 +1,112 @@
+\documentclass{article}
+
+\usepackage{amsmath,amscd,amsbsy,amssymb,latexsym,url,bm,amsthm}
+
+\begin{document}
+
+	\section{Loss function in \textit{cHawk}}
+
+		\subsection{Intensity function}
+
+		\begin{equation}
+			\lambda_{d}^{i}(t)=\boldsymbol{\mu}_{d}^{\top} \boldsymbol{f}_{j}^{i}+\sum_{t_{j}^{i}<t} \alpha_{d, d_{j}^{i}} g\left(t-t_{j}^{i}\right)
+		\end{equation}
+		
+		where $f^i_j$ is the feature of the $i$-th patient at the $j$-th visit, $\alpha_{d, d_{j}^{i}}$ refers to the influence of disease $d_{j}^{i}$ on disease $d$ and we choose exponential kernel $g$ as our decay kernel.
+		
+		\subsection{Log-likelihood}
+		
+		As a result, the probability of disease $d$ in patient $i$ is
+		
+		\begin{equation}
+			L^i_d = f\left(t^i_{d,1}, t^i_{d,2}, \ldots, t^i_{d,k}\right)=\prod_{j=1}^{n} f^{*}\left(t^i_{d,j} | \mathcal{H}\left(t_{j-1}\right)\right)
+		\end{equation}
+		while we have the following equation as the probability of an event at time $t$ is the intensity of the event times the probability of the event not happening before time $t$.
+		
+		\begin{equation}
+			f^{*} = \lambda^{*} (1 - F^*)
+		\end{equation}
+		By solving the differential equation, we have
+		
+		\begin{equation}
+			f^{*}(t)=\lambda^{*}(t) \exp \left(-\int_{t_{k}}^{t} \lambda^{*}(u) \mathrm{d} u\right)
+		\end{equation}
+		where $t_k$ is the happening time of last event. Therefore the likelihood can be expressed as
+		
+		\begin{equation}
+			L^i_d = \left[\prod_{j=1}^{n^i_d} \lambda^{*}\left(t^i_{d, j}\right)\right] \exp \left(-\int_{t_0}^{T} \lambda^{*}(u) \mathrm{d} u\right)
+		\end{equation}
+		where $t_0$ and $T$ represent the time span of whole process.
+		\\\\
+		Taking logarithm on it, the result is
+		
+		\begin{equation}
+			l^i_d = \log L^i_d = \sum_{j=1}^{n^i_d}\log \lambda^*\left(t^i_{d, j}\right) - \int_{t_0}^{T}\lambda^*\left(u\right)\mathrm{d} u
+		\end{equation}
+		Sum up all $i$ and $d$, the total log-likelihood is
+
+		\begin{equation}
+			L = \sum_i\sum_d \left\{\sum_{j=1}^{n^i_d}\log \lambda^*\left(t^i_{d, j}\right) - \int_{t_0}^{T}\lambda^*\left(u\right)\mathrm{d} u\right\}
+		\end{equation}
+		With $L^1$ regularization on $\alpha$ and $L^2$ on $\mu$, the loss function is written as
+		
+		\begin{equation}
+			loss = L + R = L + \lambda_{1}\|\boldsymbol{A}\|_{1}+\frac{\lambda_{2}}{2} \sum_{d=1}^{D}\left\|\boldsymbol{\mu}_{d}\right\|_{2}^{2}
+		\end{equation}
+		where $\|\boldsymbol{A}\|_{1}$ refers to The sum of absolute values of each element of matrix $\boldsymbol{A}$.
+		
+	\section{Derivatives of loss function}
+		\subsection{Derivatives of L}
+		
+			Just consider derivatives of $l^i_d$ and sum it up to get total derivatives.
+			
+			\begin{equation}
+				\begin{aligned} 
+					l^i_d 
+					=& \sum_{j=1}^{n^i_d} \log \lambda^i_d\left(t^i_{d, j}\right)-\int_{t_0}^{T} \lambda^i_d(t) \mathrm{d}t \\
+					=& \sum_{j=1}^{n^i_d} \log \lambda^i_d\left(t^i_{d, j}\right)-\int_{t_0}^{T}
+					\left(
+					 \boldsymbol{\mu}_{d}^{\top} \boldsymbol{f}_{j}^{i}+\sum_{t_{j}^{i}<t} \alpha_{d, d_{j}^{i}} g\left(t-t_{j}^{i}\right) \right) \mathrm{d}t \\
+					 =& \sum_{j=1}^{n^i_d} \log \lambda^i_d\left(t^i_{d, j}\right)
+					 - \boldsymbol{\mu}_d^{\top} \sum_{j=1}^{n^i} \boldsymbol{f^i_j }\left(t^i_j - t^i_{j-1}\right) 
+					 - \int_{t_{0}}^{T}\sum_{t_{j}^{i}<t} \alpha_{d, d_{j}^{i}} g\left(t-t_{j}^{i}\right) \mathrm{d} t \\
+					 =& \sum_{j=1}^{n^i_d} \log \lambda^i_d\left(t^i_{d, j}\right)
+					 - \boldsymbol{\mu}_d^{\top} \sum_{j=1}^{n^i} \boldsymbol{f^i_j }\left(t^i_j - t^i_{j-1}\right) 
+					 - \sum_{j=1}^{n^i} \int_{t^i_{j-1}}^{t^i_j}\sum_{k=0}^{j-1}\alpha_{d, d^i_k} g\left(t-t^i_k\right) \mathrm{d} t \\
+					 =& \sum_{j=1}^{n^i_d} \log \lambda^i_d\left(t^i_{d, j}\right)
+					 - \boldsymbol{\mu}_d^{\top} \sum_{j=1}^{n^i} \boldsymbol{f^i_j }\left(t^i_j - t^i_{j-1}\right) 
+					 - \sum_{j=1}^{n^i} \sum_{k=0}^{j-1} \alpha_{d, d^i_k} \int_{t^i_{j-1}}^{t^i_j} g\left(t-t^i_k\right) \mathrm{d} t\\
+					 =& \sum_{j=1}^{n^i_d} \log \lambda^i_d\left(t^i_{d, j}\right)
+					 - \boldsymbol{\mu}_d^{\top} \sum_{j=1}^{n^i} \boldsymbol{f^i_j }\left(t^i_j - t^i_{j-1}\right) 
+					 - \sum_{j=1}^{n^i} \sum_{k=0}^{j-1} \alpha_{d, d^i_k} \left(G\left(t^i_j - t^i_k\right) - G\left(t^i_{j-1} - t^i_k\right)\right)\\
+					  =& \sum_{j=1}^{n^i_d} \log \lambda^i_d\left(t^i_{d, j}\right)
+					 - \boldsymbol{\mu}_d^{\top} \sum_{j=1}^{n^i} \boldsymbol{f^i_j }\left(t^i_j - t^i_{j-1}\right) 
+					 - \sum_{k=0}^{n^i-1}\sum_{j=k+1}^{n^i}  \alpha_{d, d^i_k} \left(G\left(t^i_j - t^i_k\right) - G\left(t^i_{j-1} - t^i_k\right)\right)\\
+					  =& \sum_{j=1}^{n^i_d} \log \lambda^i_d\left(t^i_{d, j}\right)
+					 - \boldsymbol{\mu}_d^{\top} \sum_{j=1}^{n^i} \boldsymbol{f^i_j }\left(t^i_j - t^i_{j-1}\right) 
+					 - \sum_{k=0}^{n^i-1}  \alpha_{d, d^i_k} \left(G\left(T - t^i_k\right) - G\left(0\right)\right)\\
+					  =& \sum_{j=1}^{n^i_d} \log \lambda^i_d\left(t^i_{d, j}\right)
+					 - \boldsymbol{\mu}_d^{\top} \sum_{j=1}^{n^i} \boldsymbol{f^i_j }\left(t^i_j - t^i_{j-1}\right) 
+					 - \sum_{k=0}^{n^i-1}  \alpha_{d, d^i_k} G\left(T - t^i_k\right)\\
+				\end{aligned}
+			\end{equation}
+			\newpage
+			Therefore,
+			\begin{equation}
+			\begin{aligned}
+			\frac{\partial l^i_d}{\partial\alpha_{ij}} &= \sum_{i} \sum_{d} \left\{\frac{\sum_{t_{k}^{i}<t_{j}^{i}} g\left(t_{j}^{i}-t_{k}^{i}\right)}{\lambda_{d}^{i}\left(t_{j}^{i}\right)} + \sum_{d^i_k = d}G\left(T - t^i_k\right) \right\} \\
+			\frac{\partial l^i_d}{\partial\boldsymbol{\mu_d}} &=\sum_{i} \sum_{d}\left\{\frac{\boldsymbol{f^i_j}}{\lambda^i_d(t^i_{d,j})  }- \sum_{j=1}^{n^i} \boldsymbol{f^i_j }\left(t^i_j - t^i_{j-1}\right)  \right\}
+			\end{aligned}
+			\end{equation}
+		
+		\subsection{Derivatives of R}
+			
+			\begin{equation}
+				\begin{aligned}
+					\frac{\partial R}{\partial \alpha_{ij}} &= \lambda 1 \times sig\left(\alpha_{ij}\right) \\
+					\frac{\partial R}{\partial \mu} &= \lambda_{2} \boldsymbol{\mu}_d
+				\end{aligned}
+			\end{equation}
+			
+		
+\end{document}

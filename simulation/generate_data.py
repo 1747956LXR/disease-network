@@ -123,6 +123,6 @@ class data_generator:
 
 
 if __name__ == '__main__':
-    data = data_generator(150, 20)
+    data = data_generator(200, 30)
     # print(data.events)
     print(data.df)
