@@ -1,7 +1,7 @@
 # modules
 test
 */.ipynb_checkpoints
-data/mimic-iii  
+# data/mimic-iii  ## demo
 
 # __pycache__
 *.pyc 
