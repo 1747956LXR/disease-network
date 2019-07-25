@@ -37,12 +37,14 @@ class data_generator:
         self.df.to_csv("./simulation/generated_data.csv", index=None)
 
     def init_Au(self):
-        self.A = np.random.rand(self.D, self.D)
+        self.A = np.random.rand(self.D, self.D) / 5
         self.random_set_zero(self.A, 0.8)
-        self.u = np.random.rand(self.D, self.features_num)
-        self.u /= 20
+        self.u = np.random.rand(self.D, self.features_num) / 1000
 
-    def random_set_zero(self, mat: np.array, zero_rate=0.5):
+        np.save('./simulation/A0.npy', self.A)
+        np.save('./simulation/u0.npy', self.u)
+
+    def random_set_zero(self, mat: np.array, zero_rate=0.9):
         l, w = mat.shape
         for i in range(l):
             for j in range(w):
@@ -71,7 +73,7 @@ class data_generator:
         # generate {(tij, dij, fij)} for j=1:n_i, for i=1:patients_num
         self.events = dict()
 
-        dt = 0.01
+        dt = 0.1
         for i in range(self.P):
             print("generating patient", i)
             # start \in [40, 60), end \in [60, 80)
@@ -88,18 +90,19 @@ class data_generator:
 
             for t in np.arange(start, end, dt):
                 weight = last_weight + rand_range(-0.5, 0.5)
-                max_intensity = 0
-                max_d = -1
+
+                ds = []
                 for d in range(self.D):
-                    if max_intensity < self.intensity(t, i, d):
-                        max_intensity = self.intensity(t, i, d)
-                        max_d = d
-                # print(max_intensity)
-                if np.random.rand() < max_intensity * dt:
-                    self.events[i].append((t, max_d, weight))
+                    if np.random.rand() < self.intensity(t, i, d) * dt:
+                        ds.append(d)
+                if not ds:
+                    continue
+
+                choice_d = ds[np.random.randint(0, len(ds))]
+
+                self.events[i].append((t, choice_d, weight))
 
                 last_weight = weight
-
 
     def dict_to_df(self):
         # self.events -> dataframe
@@ -120,6 +123,6 @@ class data_generator:
 
 
 if __name__ == '__main__':
-    data = data_generator(100, 50)
-    print(data.events)
+    data = data_generator(150, 20)
+    # print(data.events)
     print(data.df)

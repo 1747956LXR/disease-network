@@ -24,6 +24,8 @@ def G(t):
 
 class cHawk:
     def __init__(self, train_data):
+        self.intensity = np.vectorize(self._intensity)
+
         # load train_data
         self.patients = set(train_data["subject_id"])
         self.diseases = set(train_data["primary"])
@@ -43,19 +45,21 @@ class cHawk:
         # parameters initialization
         self.A = np.random.rand(D, D)  # subject to A >= 0
         self.u = np.random.rand(D, feature_num)  # subject to u_d >= 0
+        self.u /= 10
 
         self.vis = np.zeros_like(self.A)
 
         # visualization
         self.loss_draw = []
 
-    # @profile
-    def intensity(self, t, i, d):
-        j = np.searchsorted(self.t[i], t)
+    def _intensity(self, t, i, d):
+        j = np.sum(self.t[i] < t)
         return self.u[d] @ self.f[i][j - 1] + np.sum(
-            self.A[d][self.d[i][:j]] * g(t - self.t[i][:j]))
+            self.A[d][self.d[i][:j]] * g(t - self.t[i][:j])) + 1e-9
 
-    # @profile
+    # def intensity(self, t, i, d):
+    #     return np.vectorize(self._intensity)
+
     def loss(self):
         res = 0
 
@@ -70,11 +74,12 @@ class cHawk:
 
             for d in self.diseases:
                 disease_d = (self.d[i] == d)
+                if self.d[i][0] == d:
+                    disease_d[0] = False
 
                 if disease_d.any():
-                    tijs = self.t[i][disease_d]
-                    log_likelihood += sum(
-                        np.log(self.intensity(tij, i, d)) for tij in tijs)
+                    tid = self.t[i][disease_d]
+                    log_likelihood += np.sum(np.log(self.intensity(tid, i, d)))
 
                 log_likelihood -= self.u[d] @ sum(
                     self.f[i][j] * (self.t[i][j + 1] - self.t[i][j])
@@ -87,7 +92,6 @@ class cHawk:
 
         return res
 
-    # @profile
     def grad(self):
         grad_A = np.zeros_like(self.A)
         grad_u = np.zeros_like(self.u)
@@ -99,6 +103,9 @@ class cHawk:
                 gradient = 0
                 for i in self.patients:
                     disease_d = (self.d[i] == d)
+                    if self.d[i][0] == d:
+                        disease_d[0] = False
+
                     disease_dk = (self.d[i] == dk)
                     if disease_d.any() and disease_dk.any():
                         tijs = self.t[i][disease_d]
@@ -112,7 +119,7 @@ class cHawk:
                                     gradient += g(tij - tik) / intensity_ij
 
                         T = self.t[i][-1]
-                        for tik in tiks:  
+                        for tik in tiks:
                             gradient -= G(T - tik)
 
                 gradient = -gradient
@@ -125,11 +132,13 @@ class cHawk:
             gradient = 0
             for i in self.patients:
                 disease_d = (self.d[i] == d)
+                if self.d[i][0] == d:
+                    disease_d[0] = False
 
                 if disease_d.any():
                     gradient += sum(
                         self.f[i][disease_d][k] /
-                        (self.intensity(self.t[i][disease_d][k], i, d))
+                        self.intensity(self.t[i][disease_d][k], i, d)
                         for k in range(np.sum(disease_d)))
 
                 tijs = self.t[i]
@@ -175,7 +184,7 @@ class cHawk:
         self.A[self.vis == 0] = 0
 
     # momentum gradient descent
-    def MGD(self, e=1e-3, lr=1e-5, momentum=0.8):
+    def MGD(self, e=1e-4, lr=1e-5, momentum=0.8):
         # init v_dA, v_du
         v_dA, v_du = self.grad()
         i = 0
@@ -238,8 +247,8 @@ class cHawk:
         # get rid of irrelavant disease pairs
         self.A[self.vis == 0] = 0
 
-    # Adam (is difficult to avoid local minimum), so choose MGD (???)
-    def Adam(self, e=1e-3, lr=1e-3, beta1=0.9, beta2=0.999):
+    # Adam
+    def Adam(self, e=5e-2, lr=5e-4, beta1=0.9, beta2=0.999):
         # init
         first_moment_A = 0
         first_moment_u = 0
@@ -289,7 +298,7 @@ class cHawk:
         pass
 
     def optimize(self):
-        self.MGD()
+        self.Adam()
 
     def save(self,
              file_A='./model/A.npy',
