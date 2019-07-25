@@ -238,8 +238,8 @@ class cHawk:
         # get rid of irrelavant disease pairs
         self.A[self.vis == 0] = 0
 
-    # Adam (is difficult to avoid local minimum), so choose MGD
-    def Adam(self, e=1e-5, lr=1e-6, beta1=0.9, beta2=0.999):
+    # Adam (is difficult to avoid local minimum), so choose MGD (???)
+    def Adam(self, e=1e-3, lr=1e-3, beta1=0.9, beta2=0.999):
         # init
         first_moment_A = 0
         first_moment_u = 0
@@ -283,6 +283,10 @@ class cHawk:
 
         # get rid of irrelavant disease pairs
         self.A[self.vis == 0] = 0
+
+    # Alternating Direction Method of Multipliers
+    def ADMM(self):
+        pass
 
     def optimize(self):
         self.MGD()
